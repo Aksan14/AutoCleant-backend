@@ -53,7 +53,7 @@ func (s *userServiceImpl) LoginUser(ctx context.Context, req dto.LoginRequest) (
 
 	user, err := s.UserRepository.FindByNRA(ctx, tx, req.NRA)
 	if err != nil || !util.VerifyPassword(user.Password, req.Password) {
-		return "", errors.New("")
+		return "", errors.New("nra atau password salah")
 	}
 
 	token, err := util.GenerateJWT(user.NRA)
