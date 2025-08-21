@@ -10,7 +10,6 @@ func CorsMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         origin := r.Header.Get("Origin")
         allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
-        
         originAllowed := false
         for _, allowed := range allowedOrigins {
             if origin == allowed {
@@ -18,6 +17,12 @@ func CorsMiddleware(next http.Handler) http.Handler {
                 originAllowed = true
                 break
             }
+        }
+
+        if strings.HasPrefix(r.URL.Path, "/uploads/") {
+            // lewati auth untuk static files
+            next.ServeHTTP(w, r)
+            return
         }
 
         if !originAllowed {
