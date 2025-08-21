@@ -88,9 +88,35 @@ func (controller *userControllerImpl) LoginUser(w http.ResponseWriter, r *http.R
 	util.WriteToResponseBody(w, response)
 }
 
+func (controller *userControllerImpl) FindByNRA(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	nra := ps.ByName("nra")
+	user, err := controller.UserService.FindByNRA(r.Context(), nra)
+	if err != nil {
+		response := dto.ListResponseError{
+			Code:    http.StatusNotFound,
+			Status:  "FAILED",
+			Message: err.Error(),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		util.WriteToResponseBody(w, response)
+		return
+	}
+
+	response := dto.ListResponseOK{
+		Code:    http.StatusOK,
+		Status:  "OK",
+		Data:    user,
+		Message: "User found",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	util.WriteToResponseBody(w, response)
+}
+
 func (controller *userControllerImpl) ChangePassword(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var req dto.ChangePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var changePasswordRequest dto.ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&changePasswordRequest); err != nil {
 		response := dto.ListResponseError{
 			Code:    http.StatusBadRequest,
 			Status:  "FAILED",
@@ -102,15 +128,15 @@ func (controller *userControllerImpl) ChangePassword(w http.ResponseWriter, r *h
 		return
 	}
 
-	err := controller.UserService.ChangePassword(r.Context(), req)
+	err := controller.UserService.ChangePassword(r.Context(), changePasswordRequest)
 	if err != nil {
 		response := dto.ListResponseError{
-			Code:    http.StatusBadRequest,
+			Code:    http.StatusInternalServerError,
 			Status:  "FAILED",
 			Message: err.Error(),
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		util.WriteToResponseBody(w, response)
 		return
 	}
@@ -118,7 +144,7 @@ func (controller *userControllerImpl) ChangePassword(w http.ResponseWriter, r *h
 	response := dto.ListResponseOK{
 		Code:    http.StatusOK,
 		Status:  "OK",
-		Message: "Password berhasil diubah",
+		Message: "Password changed successfully",
 	}
 
 	w.Header().Set("Content-Type", "application/json")

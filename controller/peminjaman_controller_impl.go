@@ -16,6 +16,38 @@ type peminjamanControllerImpl struct {
 	svc service.PeminjamanService
 }
 
+func (h *peminjamanControllerImpl) DeletePeminjaman(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	idStr := ps.ByName("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response := dto.ListResponseError{
+			Code:    http.StatusBadRequest,
+			Status:  "BAD_REQUEST",
+			Message: "Invalid ID format",
+		}
+		util.WriteJSON(w, http.StatusBadRequest, response)
+		return
+	}
+
+	err = h.svc.DeleteByID(r.Context(), id)
+	if err != nil {
+		response := dto.ListResponseError{
+			Code:    http.StatusInternalServerError,
+			Status:  "ERROR",
+			Message: err.Error(),
+		}
+		util.WriteJSON(w, http.StatusInternalServerError, response)
+		return
+	}
+
+	response := dto.ListResponseOK{
+		Code:    http.StatusOK,
+		Status:  "SUCCESS",
+		Message: "Peminjaman berhasil dihapus",
+	}
+	util.WriteJSON(w, http.StatusOK, response)
+}
+
 func NewPeminjamanController(s service.PeminjamanService) PeminjamanController {
 	return &peminjamanControllerImpl{svc: s}
 }

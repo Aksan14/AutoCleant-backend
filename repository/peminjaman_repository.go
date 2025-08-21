@@ -11,4 +11,5 @@ type PeminjamanRepository interface {
 	UpdateReturnTx(ctx context.Context, tx *sql.Tx, id int, tglKembali string, kondisi string) error
 	GetAll(ctx context.Context) ([]model.Peminjaman, error)
 	GetByID(ctx context.Context, id int) (model.Peminjaman, error)
+	DeleteByID(ctx context.Context, id int) error
 }

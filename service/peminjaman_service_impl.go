@@ -7,6 +7,7 @@ import (
 	"reset/dto"
 	"reset/model"
 	"reset/repository"
+	"strconv"
 	"time"
 )
 
@@ -154,4 +155,17 @@ func (s *peminjamanServiceImpl) ListPeminjaman(ctx context.Context) ([]dto.Pemin
 		})
 	}
 	return out, nil
+}
+
+func (s *peminjamanServiceImpl) DeleteByID(ctx context.Context, id int) error {
+	peminjaman, err := s.pjmRepo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New("data tidak ditemukan dengan id " + strconv.Itoa(id))
+	}
+
+	if peminjaman.Status != "selesai" {
+		return errors.New("tidak dapat menghapus peminjaman yang masih aktif")
+	}
+
+	return s.pjmRepo.DeleteByID(ctx, id)
 }

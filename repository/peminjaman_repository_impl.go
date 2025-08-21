@@ -103,3 +103,15 @@ func (r *peminjamanRepositoryImpl) GetByID(ctx context.Context, id int) (model.P
 	return m, nil
 }
 
+func (r *peminjamanRepositoryImpl) DeleteByID(ctx context.Context, id int) error {
+	res, err := r.DB.ExecContext(ctx, `
+		DELETE FROM peminjaman WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	aff, _ := res.RowsAffected()
+	if aff == 0 {
+		return errors.New("data peminjaman tidak ditemukan")
+	}
+	return nil
+}

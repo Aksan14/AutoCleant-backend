@@ -14,7 +14,6 @@ import (
 func Routes(db *sql.DB, port string) {
 	router := httprouter.New()
 
-	// Middleware JWT Verifikasi
 	VerifJwt := func(h httprouter.Handle) httprouter.Handle {
 		return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			mw := middleware.JwtVerifyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +57,7 @@ func Routes(db *sql.DB, port string) {
 	router.POST("/api/peminjaman", peminjamanController.CreatePeminjaman)
 	router.PUT("/api/peminjaman/kembali/:id", peminjamanController.ReturnPeminjaman)
 	router.GET("/api/peminjaman", peminjamanController.ListPeminjaman)
+	router.DELETE("/api/peminjaman/delete/:id", peminjamanController.DeletePeminjaman)
 
 	// Stats dashboard
 	statsRepo := repository.NewReportRepository(db)
