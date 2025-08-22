@@ -18,7 +18,9 @@ func NewBarangRepositoryImpl(db *sql.DB) BarangRepository {
 func (r *barangRepositoryImpl) GetAvailable(ctx context.Context) ([]model.Inventaris, error) {
 	rows, err := r.DB.QueryContext(ctx,
 		`SELECT id, nama_barang, kategori, jumlah, satuan, kondisi, foto, status
-		 FROM inventaris WHERE status = 'tersedia'`)
+		 FROM inventaris 
+		 WHERE status = 'tersedia' 
+		   AND kondisi <> 'Dimusnahkan'`)
 	if err != nil {
 		return nil, err
 	}
@@ -34,6 +36,7 @@ func (r *barangRepositoryImpl) GetAvailable(ctx context.Context) ([]model.Invent
 	}
 	return out, nil
 }
+
 
 func (r *barangRepositoryImpl) GetByID(ctx context.Context, id int) (model.Inventaris, error) {
 	var b model.Inventaris

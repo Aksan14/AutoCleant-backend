@@ -56,7 +56,7 @@ func (r *peminjamanRepositoryImpl) GetAll(ctx context.Context) ([]model.Peminjam
 		       p.tgl_pinjam, p.rencana_kembali, p.tgl_kembali, p.kondisi_setelah, p.status, p.keterangan
 		FROM peminjaman p
 		JOIN inventaris b ON b.id = p.inventaris_id
-		ORDER BY p.tgl_pinjam DESC` )
+		ORDER BY p.tgl_pinjam DESC`)
 	if err != nil {
 		return nil, err
 	}

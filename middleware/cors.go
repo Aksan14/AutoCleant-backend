@@ -20,7 +20,6 @@ func CorsMiddleware(next http.Handler) http.Handler {
         }
 
         if strings.HasPrefix(r.URL.Path, "/uploads/") {
-            // lewati auth untuk static files
             next.ServeHTTP(w, r)
             return
         }
