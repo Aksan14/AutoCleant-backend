@@ -14,21 +14,21 @@ import (
 func Routes(db *sql.DB, port string) {
 	router := httprouter.New()
 
-	VerifJwt := func(h httprouter.Handle) httprouter.Handle {
-		return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-			mw := middleware.JwtVerifyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				h(w, r, ps)
-			}))
-			mw.ServeHTTP(w, r)
-		}
-	}
+	// VerifJwt := func(h httprouter.Handle) httprouter.Handle {
+	// 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// 		mw := middleware.JwtVerifyMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 			h(w, r, ps)
+	// 		}))
+	// 		mw.ServeHTTP(w, r)
+	// 	}
+	// }
 
 	// User
 	userRepo := repository.NewUserRepositoryImpl(db)
 	userService := service.NewUserServiceImpl(userRepo, db)
 	userController := controller.NewUserController(userService)
 
-	router.POST("/api/user/createusers", VerifJwt(userController.CreateUser))
+	router.POST("/api/user/createusers", userController.CreateUser)
 	router.POST("/api/user/login", userController.LoginUser)
 	router.POST("/api/user/changepassword", userController.ChangePassword)
 
