@@ -3,12 +3,19 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"reset/model"
 )
 
 type barangRepositoryImpl struct {
 	DB *sql.DB
+}
+
+func (r *barangRepositoryImpl) UpdateJumlahTx(ctx context.Context, tx *sql.Tx, id int, jumlah int) error {
+	_, err := tx.ExecContext(ctx, `UPDATE inventaris SET jumlah = ? WHERE id = ?`, jumlah, id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewBarangRepositoryImpl(db *sql.DB) BarangRepository {
@@ -37,7 +44,6 @@ func (r *barangRepositoryImpl) GetAvailable(ctx context.Context) ([]model.Invent
 	return out, nil
 }
 
-
 func (r *barangRepositoryImpl) GetByID(ctx context.Context, id int) (model.Inventaris, error) {
 	var b model.Inventaris
 	err := r.DB.QueryRowContext(ctx,
@@ -51,13 +57,9 @@ func (r *barangRepositoryImpl) GetByID(ctx context.Context, id int) (model.Inven
 }
 
 func (r *barangRepositoryImpl) UpdateStatusTx(ctx context.Context, tx *sql.Tx, id int, status string) error {
-	res, err := tx.ExecContext(ctx, `UPDATE inventaris SET status = ? WHERE id = ?`, status, id)
+	_, err := tx.ExecContext(ctx, `UPDATE inventaris SET status = ? WHERE id = ?`, status, id)
 	if err != nil {
 		return err
-	}
-	aff, _ := res.RowsAffected()
-	if aff == 0 {
-		return errors.New("barang tidak ditemukan")
 	}
 	return nil
 }

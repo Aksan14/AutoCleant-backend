@@ -27,8 +27,6 @@ func (s *inventarisServiceImpl) CreateInventaris(item *model.Inventaris) (int, e
 	return s.repo.CreateInventaris(item)
 }
 
-// Update
-// Update
 func (s *inventarisServiceImpl) UpdateInventaris(item *model.Inventaris) error {
 	// Cek apakah ID ada
 	oldData, err := s.repo.GetByIDInventaris(item.ID)

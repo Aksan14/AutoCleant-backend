@@ -21,7 +21,7 @@ func (r *reportRepositoryImpl) CountAllBarang(ctx context.Context) (int, error) 
 
 func (r *reportRepositoryImpl) CountBarangDipinjam(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM inventaris WHERE status = 'dipinjam'").Scan(&count)
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM peminjaman WHERE status != 'selesai'").Scan(&count)
 	return count, err
 }
 

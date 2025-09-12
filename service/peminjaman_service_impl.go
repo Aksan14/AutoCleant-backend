@@ -30,20 +30,25 @@ func (s *peminjamanServiceImpl) ListBarangTersedia(ctx context.Context) ([]dto.B
 	for _, b := range items {
 		out = append(out, dto.BarangSimpleResponse{
 			ID: b.ID, NamaBarang: b.NamaBarang, Kategori: b.Kategori,
-			Satuan: b.Satuan, Kondisi: b.Kondisi, Foto: b.Foto,
+			Satuan: b.Satuan, Kondisi: b.Kondisi, Foto: b.Foto, Jumlah: b.Jumlah,
 		})
 	}
 	return out, nil
 }
 
 func (s *peminjamanServiceImpl) CreatePeminjaman(ctx context.Context, req dto.CreatePeminjamanRequest) (dto.PeminjamanResponse, error) {
-	// Validasi barang tersedia
 	barang, err := s.brgRepo.GetByID(ctx, req.BarangID)
 	if err != nil {
 		return dto.PeminjamanResponse{}, err
 	}
 	if barang.Status != "tersedia" {
 		return dto.PeminjamanResponse{}, errors.New("barang tidak tersedia")
+	}
+	if req.Jumlah < 1 {
+		return dto.PeminjamanResponse{}, errors.New("jumlah minimal 1")
+	}
+	if req.Jumlah > barang.Jumlah {
+		return dto.PeminjamanResponse{}, errors.New("jumlah yang diminta melebihi stok tersedia")
 	}
 
 	tPinjam, err := time.Parse("2006-01-02", req.TglPinjam)
@@ -71,13 +76,26 @@ func (s *peminjamanServiceImpl) CreatePeminjaman(ctx context.Context, req dto.Cr
 		NamaPeminjam:   req.NamaPeminjam,
 		TglPinjam:      tPinjam,
 		RencanaKembali: tRencana,
-		Keterangan:    req.Keterangan,
+		Jumlah:         req.Jumlah,
+		Keterangan:     req.Keterangan,
 	})
 	if err != nil {
 		return dto.PeminjamanResponse{}, err
 	}
 
-	if err = s.brgRepo.UpdateStatusTx(ctx, tx, req.BarangID, "dipinjam"); err != nil {
+	// Kurangi stok barang
+	newJumlah := barang.Jumlah - req.Jumlah
+	err = s.brgRepo.UpdateJumlahTx(ctx, tx, req.BarangID, newJumlah)
+	if err != nil {
+		return dto.PeminjamanResponse{}, err
+	}
+
+	// Update status otomatis
+	status := "tersedia"
+	if newJumlah == 0 {
+		status = "dipinjam"
+	}
+	if err = s.brgRepo.UpdateStatusTx(ctx, tx, req.BarangID, status); err != nil {
 		return dto.PeminjamanResponse{}, err
 	}
 
@@ -90,24 +108,24 @@ func (s *peminjamanServiceImpl) CreatePeminjaman(ctx context.Context, req dto.Cr
 		NamaPeminjam:   p.NamaPeminjam,
 		TglPinjam:      tPinjam.Format("2006-01-02"),
 		RencanaKembali: tRencana.Format("2006-01-02"),
-		Status:         "dipinjam",
-		Keterangan:    p.Keterangan,
+		Jumlah:         p.Jumlah,
+		Status:         p.Status,
+		Keterangan:     p.Keterangan,
 	}, nil
 }
 
 func (s *peminjamanServiceImpl) ReturnPeminjaman(ctx context.Context, id int, req dto.ReturnPeminjamanRequest) error {
+	// Validasi input required
+	if req.FotoBuktiKembali == "" {
+		return errors.New("foto bukti pengembalian wajib diisi")
+	}
+	if req.KeteranganKembali == "" {
+		return errors.New("keterangan pengembalian wajib diisi")
+	}
+
 	tKembali, err := time.Parse("2006-01-02", req.TglKembali)
 	if err != nil {
 		return errors.New("format tgl_kembali salah (YYYY-MM-DD)")
-	}
-
-
-	pjm, err := s.pjmRepo.GetByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if pjm.Status == "selesai" {
-		return errors.New("peminjaman sudah selesai dan terkunci")
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -120,16 +138,63 @@ func (s *peminjamanServiceImpl) ReturnPeminjaman(ctx context.Context, id int, re
 		}
 	}()
 
-	// update peminjaman -> selesai
-	if err = s.pjmRepo.UpdateReturnTx(ctx, tx, id, tKembali.Format("2006-01-02"), req.KondisiSetelah); err != nil {
-		return err
-	}
-	// update status barang -> tersedia
-	if err = s.brgRepo.UpdateStatusTx(ctx, tx, pjm.BarangID, "tersedia"); err != nil {
+	// 1. Ambil data peminjaman dengan jumlah yang dipinjam
+	pjm, err := s.pjmRepo.GetByID(ctx, id)
+	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
-	return tx.Commit()
+	// 2. Validasi status peminjaman
+	if pjm.Status == "selesai" {
+		tx.Rollback()
+		return errors.New("peminjaman sudah selesai dan terkunci")
+	}
+
+	// 3. Validasi jumlah yang dipinjam harus valid
+	if pjm.Jumlah <= 0 {
+		tx.Rollback()
+		return errors.New("data peminjaman tidak valid, jumlah kosong")
+	}
+
+	// 4. Ambil data barang dari inventaris
+	barang, err := s.brgRepo.GetByID(ctx, pjm.BarangID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 5. Kembalikan stok barang ke inventaris
+	// Tambahkan jumlah yang dipinjam kembali ke stok
+	newJumlah := barang.Jumlah + pjm.Jumlah
+	if err = s.brgRepo.UpdateJumlahTx(ctx, tx, pjm.BarangID, newJumlah); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 6. Update status barang otomatis
+	status := "tersedia"
+	if newJumlah == 0 {
+		status = "dipinjam"
+	}
+	if err = s.brgRepo.UpdateStatusTx(ctx, tx, pjm.BarangID, status); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 7. Update data peminjaman (status, tanggal kembali, kondisi, foto, keterangan)
+	// PENTING: Field Jumlah TIDAK BERUBAH - tetap untuk history
+	if err = s.pjmRepo.UpdateReturnTx(ctx, tx, id, tKembali.Format("2006-01-02"), req.KondisiSetelah, req.FotoBuktiKembali, req.KeteranganKembali); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 8. Commit transaksi
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *peminjamanServiceImpl) ListPeminjaman(ctx context.Context) ([]dto.PeminjamanResponse, error) {
@@ -146,12 +211,16 @@ func (s *peminjamanServiceImpl) ListPeminjaman(ctx context.Context) ([]dto.Pemin
 		}
 		out = append(out, dto.PeminjamanResponse{
 			ID: m.ID, BarangID: m.BarangID, BarangNama: m.BarangNama,
-			NamaPeminjam:   m.NamaPeminjam,
-			TglPinjam:      m.TglPinjam.Format("2006-01-02"),
-			RencanaKembali: m.RencanaKembali.Format("2006-01-02"),
-			TglKembali:     tglKembali, KondisiSetelah: m.KondisiSetelah,
-			Status: m.Status,
-			Keterangan: m.Keterangan,
+			NamaPeminjam:      m.NamaPeminjam,
+			TglPinjam:         m.TglPinjam.Format("2006-01-02"),
+			RencanaKembali:    m.RencanaKembali.Format("2006-01-02"),
+			TglKembali:        tglKembali,
+			Jumlah:            m.Jumlah, 
+			KondisiSetelah:    m.KondisiSetelah,
+			Status:            m.Status,
+			Keterangan:        m.Keterangan,
+			FotoBuktiKembali:  m.FotoBuktiKembali,
+			KeteranganKembali: m.KeteranganKembali,
 		})
 	}
 	return out, nil

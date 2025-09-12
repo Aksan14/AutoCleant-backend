@@ -64,13 +64,13 @@ func (h *peminjamanControllerImpl) GetBarangTersedia(w http.ResponseWriter, r *h
 		return
 	}
 
-	response := dto.ListResponseOK {
-		Code: http.StatusOK,
-		Status: "OK",
-		Data: data,
+	response := dto.ListResponseOK{
+		Code:    http.StatusOK,
+		Status:  "OK",
+		Data:    data,
 		Message: "Barang tersedia berhasil diambil",
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -98,7 +98,7 @@ func (h *peminjamanControllerImpl) CreatePeminjaman(w http.ResponseWriter, r *ht
 		return
 	}
 
-	response := dto.ListResponseOK {
+	response := dto.ListResponseOK{
 		Code:    http.StatusOK,
 		Status:  "OK",
 		Data:    res,
@@ -120,16 +120,68 @@ func (h *peminjamanControllerImpl) ReturnPeminjaman(w http.ResponseWriter, r *ht
 		util.WriteJSON(w, http.StatusBadRequest, response)
 		return
 	}
-	var req dto.ReturnPeminjamanRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	// Parse multipart form untuk file upload
+	err = r.ParseMultipartForm(10 << 20) // 10MB limit
+	if err != nil {
 		response := dto.ListResponseError{
 			Code:    http.StatusBadRequest,
 			Status:  "Bad Request",
-			Message: err.Error(),
+			Message: "Failed to parse multipart form: " + err.Error(),
 		}
 		util.WriteJSON(w, http.StatusBadRequest, response)
 		return
 	}
+
+	// Save uploaded photo
+	fotoBukti, err := saveUploadedFile(r, "foto_bukti_kembali")
+	if err != nil {
+		response := dto.ListResponseError{
+			Code:    http.StatusBadRequest,
+			Status:  "Bad Request",
+			Message: "Failed to save photo: " + err.Error(),
+		}
+		util.WriteJSON(w, http.StatusBadRequest, response)
+		return
+	}
+
+	// Build request object
+	req := dto.ReturnPeminjamanRequest{
+		TglKembali:        r.FormValue("tgl_kembali"),
+		KondisiSetelah:    r.FormValue("kondisi_setelah"),
+		FotoBuktiKembali:  fotoBukti,
+		KeteranganKembali: r.FormValue("keterangan_kembali"),
+	}
+
+	// Validate required fields
+	if req.TglKembali == "" {
+		response := dto.ListResponseError{
+			Code:    http.StatusBadRequest,
+			Status:  "Bad Request",
+			Message: "tgl_kembali is required",
+		}
+		util.WriteJSON(w, http.StatusBadRequest, response)
+		return
+	}
+	if req.KondisiSetelah == "" {
+		response := dto.ListResponseError{
+			Code:    http.StatusBadRequest,
+			Status:  "Bad Request",
+			Message: "kondisi_setelah is required",
+		}
+		util.WriteJSON(w, http.StatusBadRequest, response)
+		return
+	}
+	if req.KeteranganKembali == "" {
+		response := dto.ListResponseError{
+			Code:    http.StatusBadRequest,
+			Status:  "Bad Request",
+			Message: "keterangan_kembali is required",
+		}
+		util.WriteJSON(w, http.StatusBadRequest, response)
+		return
+	}
+
 	if err := h.svc.ReturnPeminjaman(r.Context(), id, req); err != nil {
 		response := dto.ListResponseError{
 			Code:    http.StatusBadRequest,
@@ -143,7 +195,7 @@ func (h *peminjamanControllerImpl) ReturnPeminjaman(w http.ResponseWriter, r *ht
 	response := dto.ListResponseOK{
 		Code:    http.StatusOK,
 		Status:  "OK",
-		Data:    nil,
+		Data:    req,
 		Message: "Pengembalian berhasil",
 	}
 	w.Header().Set("Content-Type", "application/json")

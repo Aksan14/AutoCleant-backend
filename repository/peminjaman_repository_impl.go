@@ -17,9 +17,9 @@ func NewPeminjamanRepositoryImpl(db *sql.DB) PeminjamanRepository {
 
 func (r *peminjamanRepositoryImpl) CreateTx(ctx context.Context, tx *sql.Tx, p model.Peminjaman) (model.Peminjaman, error) {
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO peminjaman (inventaris_id, nama_peminjam, tgl_pinjam, rencana_kembali, keterangan, status)
-		VALUES (?, ?, ?, ?, ?, 'dipinjam')`,
-		p.BarangID, p.NamaPeminjam, p.TglPinjam, p.RencanaKembali, p.Keterangan,
+	   INSERT INTO peminjaman (inventaris_id, nama_peminjam, tgl_pinjam, rencana_kembali, jumlah, keterangan, status)
+	   VALUES (?, ?, ?, ?, ?, ?, 'dipinjam')`,
+		p.BarangID, p.NamaPeminjam, p.TglPinjam, p.RencanaKembali, p.Jumlah, p.Keterangan,
 	)
 	if err != nil {
 		return p, err
@@ -33,12 +33,12 @@ func (r *peminjamanRepositoryImpl) CreateTx(ctx context.Context, tx *sql.Tx, p m
 	return p, nil
 }
 
-func (r *peminjamanRepositoryImpl) UpdateReturnTx(ctx context.Context, tx *sql.Tx, id int, tglKembali string, kondisi string) error {
+func (r *peminjamanRepositoryImpl) UpdateReturnTx(ctx context.Context, tx *sql.Tx, id int, tglKembali string, kondisi string, fotoBukti string, keteranganKembali string) error {
 	res, err := tx.ExecContext(ctx, `
 		UPDATE peminjaman
-		SET tgl_kembali = ?, kondisi_setelah = ?, status = 'selesai'
+		SET tgl_kembali = ?, kondisi_setelah = ?, status = 'selesai', foto_bukti_kembali = ?, keterangan_kembali = ?
 		WHERE id = ? AND status = 'dipinjam'`,
-		tglKembali, kondisi, id,
+		tglKembali, kondisi, fotoBukti, keteranganKembali, id,
 	)
 	if err != nil {
 		return err
@@ -53,7 +53,8 @@ func (r *peminjamanRepositoryImpl) UpdateReturnTx(ctx context.Context, tx *sql.T
 func (r *peminjamanRepositoryImpl) GetAll(ctx context.Context) ([]model.Peminjaman, error) {
 	rows, err := r.DB.QueryContext(ctx, `
 		SELECT p.id, p.inventaris_id, b.nama_barang, p.nama_peminjam, 
-		       p.tgl_pinjam, p.rencana_kembali, p.tgl_kembali, p.kondisi_setelah, p.status, p.keterangan
+		       p.tgl_pinjam, p.rencana_kembali, p.tgl_kembali, p.kondisi_setelah, p.status, p.keterangan,
+		       p.foto_bukti_kembali, p.keterangan_kembali, p.jumlah
 		FROM peminjaman p
 		JOIN inventaris b ON b.id = p.inventaris_id
 		ORDER BY p.tgl_pinjam DESC`)
@@ -67,7 +68,9 @@ func (r *peminjamanRepositoryImpl) GetAll(ctx context.Context) ([]model.Peminjam
 		var m model.Peminjaman
 		var tglKembali sql.NullTime
 		var kondisi sql.NullString
-		if err := rows.Scan(&m.ID, &m.BarangID, &m.BarangNama, &m.NamaPeminjam, &m.TglPinjam, &m.RencanaKembali, &tglKembali, &kondisi, &m.Status, &m.Keterangan); err != nil {
+		var fotoBukti sql.NullString
+		var keteranganKembali sql.NullString
+		if err := rows.Scan(&m.ID, &m.BarangID, &m.BarangNama, &m.NamaPeminjam, &m.TglPinjam, &m.RencanaKembali, &tglKembali, &kondisi, &m.Status, &m.Keterangan, &fotoBukti, &keteranganKembali, &m.Jumlah); err != nil {
 			return nil, err
 		}
 		if tglKembali.Valid {
@@ -76,6 +79,14 @@ func (r *peminjamanRepositoryImpl) GetAll(ctx context.Context) ([]model.Peminjam
 		if kondisi.Valid {
 			s := kondisi.String
 			m.KondisiSetelah = &s
+		}
+		if fotoBukti.Valid {
+			s := fotoBukti.String
+			m.FotoBuktiKembali = &s
+		}
+		if keteranganKembali.Valid {
+			s := keteranganKembali.String
+			m.KeteranganKembali = &s
 		}
 		list = append(list, m)
 	}
@@ -86,10 +97,12 @@ func (r *peminjamanRepositoryImpl) GetByID(ctx context.Context, id int) (model.P
 	var m model.Peminjaman
 	var tglKembali sql.NullTime
 	var kondisi sql.NullString
+	var fotoBukti sql.NullString
+	var keteranganKembali sql.NullString
 	err := r.DB.QueryRowContext(ctx, `
-		SELECT id, inventaris_id, nama_peminjam, tgl_pinjam, rencana_kembali, tgl_kembali, kondisi_setelah, status, keterangan
+		SELECT id, inventaris_id, nama_peminjam, tgl_pinjam, rencana_kembali, tgl_kembali, kondisi_setelah, status, keterangan, foto_bukti_kembali, keterangan_kembali, jumlah
 		FROM peminjaman WHERE id = ?`, id).
-		Scan(&m.ID, &m.BarangID, &m.NamaPeminjam, &m.TglPinjam, &m.RencanaKembali, &tglKembali, &kondisi, &m.Status, &m.Keterangan)
+		Scan(&m.ID, &m.BarangID, &m.NamaPeminjam, &m.TglPinjam, &m.RencanaKembali, &tglKembali, &kondisi, &m.Status, &m.Keterangan, &fotoBukti, &keteranganKembali, &m.Jumlah)
 	if err != nil {
 		return model.Peminjaman{}, err
 	}
@@ -99,6 +112,14 @@ func (r *peminjamanRepositoryImpl) GetByID(ctx context.Context, id int) (model.P
 	if kondisi.Valid {
 		s := kondisi.String
 		m.KondisiSetelah = &s
+	}
+	if fotoBukti.Valid {
+		s := fotoBukti.String
+		m.FotoBuktiKembali = &s
+	}
+	if keteranganKembali.Valid {
+		s := keteranganKembali.String
+		m.KeteranganKembali = &s
 	}
 	return m, nil
 }

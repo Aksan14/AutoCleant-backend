@@ -5,7 +5,6 @@ import (
     "errors"
     "reset/model"
     _ "github.com/go-sql-driver/mysql"
-    "time"
 )
 
 type itemRepositoryMySQL struct {
@@ -40,7 +39,7 @@ func (r *itemRepositoryMySQL) GetByIDInventaris(id int) (*model.Inventaris, erro
 }
 
 func (r *itemRepositoryMySQL) GetAllInventaris() ([]*model.Inventaris, error) {
-    query := `SELECT id, nama_barang, kategori, jumlah, satuan, kondisi, foto FROM inventaris ORDER BY id DESC`
+    query := `SELECT id, nama_barang, kategori, jumlah, satuan, kondisi, foto, created_at, updated_at FROM inventaris ORDER BY id DESC`
     rows, err := r.db.Query(query)
     if err != nil {
         return nil, err
@@ -50,12 +49,10 @@ func (r *itemRepositoryMySQL) GetAllInventaris() ([]*model.Inventaris, error) {
     var items []*model.Inventaris
     for rows.Next() {
         it := &model.Inventaris{}
-        var created, updated time.Time
-        if err := rows.Scan(&it.ID, &it.NamaBarang, &it.Kategori, &it.Jumlah, &it.Satuan, &it.Kondisi, &it.Foto); err != nil {
+        if err := rows.Scan(&it.ID, &it.NamaBarang, &it.Kategori, &it.Jumlah, &it.Satuan, &it.Kondisi, &it.Foto, &it.CreatedAt, &it.UpdatedAt); err != nil {
             return nil, err
         }
-        it.CreatedAt = created
-        it.UpdatedAt = updated
+
         items = append(items, it)
     }
     return items, nil

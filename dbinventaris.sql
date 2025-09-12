@@ -119,6 +119,8 @@ CREATE TABLE `peminjaman` (
   `kondisi_setelah` varchar(50) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'dipinjam',
   `keterangan` text,
+  `foto_bukti_kembali` varchar(255) DEFAULT NULL,
+  `keterangan_kembali` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `inventaris_id` (`inventaris_id`),
   CONSTRAINT `peminjaman_ibfk_1` FOREIGN KEY (`inventaris_id`) REFERENCES `inventaris` (`id`)

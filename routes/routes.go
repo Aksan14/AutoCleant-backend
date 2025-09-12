@@ -48,8 +48,8 @@ func Routes(db *sql.DB, port string) {
 	router.GET("/api/inventaris/search", inventarisController.SearchInventaris)
 
 	// Peminjaman / Barang
-	barangRepo := repository.NewBarangRepositoryImpl(db)
 	peminjamanRepo := repository.NewPeminjamanRepositoryImpl(db)
+	barangRepo := repository.NewBarangRepositoryImpl(db)
 	peminjamanService := service.NewPeminjamanServiceImpl(db, barangRepo, peminjamanRepo)
 	peminjamanController := controller.NewPeminjamanController(peminjamanService)
 
