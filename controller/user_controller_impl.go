@@ -30,7 +30,7 @@ func (controller *userControllerImpl) CreateUser(w http.ResponseWriter, r *http.
 		response := dto.ListResponseError{
 			Code:    http.StatusBadRequest,
 			Status:  "Bad Request",
-			Message: "NRA sudah terdaftar",
+			Message: "Email sudah terdaftar",
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -89,7 +89,7 @@ func (controller *userControllerImpl) LoginUser(w http.ResponseWriter, r *http.R
 }
 
 func (controller *userControllerImpl) FindByNRA(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	nra := ps.ByName("nra")
+	nra := ps.ByName("email")
 	user, err := controller.UserService.FindByNRA(r.Context(), nra)
 	if err != nil {
 		response := dto.ListResponseError{

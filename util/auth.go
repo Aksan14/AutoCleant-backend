@@ -11,7 +11,7 @@ import (
 var JwtKey = []byte("secret_key") 
 
 type Claims struct {
-	NRA    string `json:"nra"`
+	NRA    string `json:"email"`
 	jwt.StandardClaims
 }
 

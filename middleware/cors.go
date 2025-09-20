@@ -2,34 +2,34 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
-    "os"
+	// "strings"
+    // "os"
 )
 
 func CorsMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        origin := r.Header.Get("Origin")
-        allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
-        originAllowed := false
-        for _, allowed := range allowedOrigins {
-            if origin == allowed {
-                w.Header().Set("Access-Control-Allow-Origin", origin)
-                originAllowed = true
-                break
-            }
-        }
+        // origin := r.Header.Get("Origin")
+        // allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+        // originAllowed := false
+        // for _, allowed := range allowedOrigins {
+        //     if origin == allowed {
+        //         w.Header().Set("Access-Control-Allow-Origin", origin)
+        //         originAllowed = true
+        //         break
+        //     }
+        // }
 
-        if strings.HasPrefix(r.URL.Path, "/uploads/") {
-            next.ServeHTTP(w, r)
-            return
-        }
+        // if strings.HasPrefix(r.URL.Path, "/uploads/") {
+        //     next.ServeHTTP(w, r)
+        //     return
+        // }
 
-        if !originAllowed {
-            http.Error(w, "Origin not allowed", http.StatusForbidden)
-            return
-        }
+        // if !originAllowed {
+        //     http.Error(w, "Origin not allowed", http.StatusForbidden)
+        //     return
+        // }
         
-        // w.Header().Set("Access-Control-Allow-Origin", "*") 
+        w.Header().Set("Access-Control-Allow-Origin", "*") 
         w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, ngrok-skip-browser-warning")
         w.Header().Set("Access-Control-Allow-Credentials", "true")
