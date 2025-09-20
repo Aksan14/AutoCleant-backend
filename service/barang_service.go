@@ -270,5 +270,22 @@ func (s *barangServiceImpl) mapToResponse(barang *model.Barang) *dto.BarangRespo
 }
 
 func (s *barangServiceImpl) formatCurrency(amount float64) string {
-	return fmt.Sprintf("Rp %.2f", amount)
+    // Konversi ke string dengan 2 desimal
+    str := fmt.Sprintf("%.2f", amount)
+    
+    // Split integer dan desimal
+    parts := strings.Split(str, ".")
+    integerPart := parts[0]
+    decimalPart := parts[1]
+    
+    // Format integer part dengan separator titik setiap 3 digit dari kanan
+    var formatted []string
+    for i, digit := range integerPart {
+        if i > 0 && (len(integerPart)-i)%3 == 0 {
+            formatted = append(formatted, ".")
+        }
+        formatted = append(formatted, string(digit))
+    }
+    
+    return fmt.Sprintf("Rp. %s,%s", strings.Join(formatted, ""), decimalPart)
 }
