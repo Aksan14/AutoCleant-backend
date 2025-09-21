@@ -24,7 +24,6 @@ func (controller *userControllerImpl) CreateUser(w http.ResponseWriter, r *http.
 	var requestCreate dto.CreateUserRequest
 	util.ReadFromRequestBody(r, &requestCreate)
 
-	// Cek user sudah ada
 	existingUser, _ := controller.UserService.FindByNRA(r.Context(), requestCreate.NRA)
 	if existingUser != nil {
 		response := dto.ListResponseError{

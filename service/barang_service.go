@@ -275,8 +275,7 @@ func (s *barangServiceImpl) formatCurrency(amount float64) string {
     
     // Konversi ke string
     str := fmt.Sprintf("%d", intAmount)
-    
-    // Format dengan separator titik setiap 3 digit dari kanan
+
     var formatted []string
     for i, digit := range str {
         if i > 0 && (len(str)-i)%3 == 0 {

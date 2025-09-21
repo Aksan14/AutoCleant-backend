@@ -95,8 +95,8 @@ func (c *barangController) CreateBarang(w http.ResponseWriter, r *http.Request, 
 	}
 
 	response := dto.ListResponseOK{
-		Code:    http.StatusCreated,
-		Status:  "Created",
+		Code:    http.StatusOK,
+		Status:  "OK",
 		Data:    resp,
 		Message: "Barang created successfully",
 	}
